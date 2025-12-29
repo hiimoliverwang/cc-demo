@@ -63,7 +63,7 @@ jobs:
           claude -p "The CI checks failed. Please fix all lint and TypeScript errors by running 'npm run lint' and 'npm run build', then commit the fixes with message 'fix: auto-fix lint and type errors' and push to origin" \
             --allowedTools "Read" "Edit" "Bash(npm:*)" "Bash(git:*)"
 
-  # Job 3: Smoke tests (only runs if check passes)
+  # Job 3: Smoke tests with Claude Agent SDK (only runs if check passes)
   smoke-test:
     runs-on: ubuntu-latest
     needs: check
@@ -86,24 +86,7 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install chromium
 
-      - name: Install Claude Code CLI
-        run: npm install -g @anthropic-ai/claude-code
-
-      - name: Setup Playwright MCP for Claude
-        run: |
-          mkdir -p ~/.claude
-          cat > ~/.claude/config.json << 'EOF'
-          {
-            "mcpServers": {
-              "playwright": {
-                "command": "npx",
-                "args": ["-y", "@microsoft/playwright-mcp@latest", "--browser", "chromium", "--headless"]
-              }
-            }
-          }
-          EOF
-
-      - name: Run smoke tests
+      - name: Run smoke tests with Claude Agent SDK
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
@@ -112,15 +95,10 @@ jobs:
           PREVIEW_PID=$!
 
           # Wait for server to be ready
-          sleep 8
+          sleep 5
 
-          # Run smoke tests with Claude Code + Playwright MCP
-          claude -p "Using Playwright MCP, navigate to http://localhost:4173 and verify:
-          1. The page loads with 'Vite + React' title
-          2. The counter button is visible and starts at 0
-          3. Clicking the counter increments it to 1
-          Report all results." \
-            --allowedTools "Read" "mcp__playwright__*" || echo "⚠️ Smoke test completed"
+          # Run smoke tests using Agent SDK
+          npm run smoke-test:ci
 
           # Cleanup
           kill $PREVIEW_PID || true
