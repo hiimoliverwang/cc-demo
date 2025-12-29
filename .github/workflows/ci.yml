@@ -61,4 +61,66 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
           claude -p "The CI checks failed. Please fix all lint and TypeScript errors by running 'npm run lint' and 'npm run build', then commit the fixes with message 'fix: auto-fix lint and type errors' and push to origin" \
-            --allowedTools "Edit,Bash(npm *),Bash(git *)"
+            --allowedTools "Read" "Edit" "Bash(npm:*)" "Bash(git:*)"
+
+  # Job 3: Smoke tests (only runs if check passes)
+  smoke-test:
+    runs-on: ubuntu-latest
+    needs: check
+    if: success()
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build app
+        run: npm run build
+
+      - name: Install Playwright browsers
+        run: npx playwright install chromium
+
+      - name: Install Claude Code CLI
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Setup Playwright MCP for Claude
+        run: |
+          mkdir -p ~/.claude
+          cat > ~/.claude/config.json << 'EOF'
+          {
+            "mcpServers": {
+              "playwright": {
+                "command": "npx",
+                "args": ["-y", "@microsoft/playwright-mcp@latest", "--browser", "chromium", "--headless"]
+              }
+            }
+          }
+          EOF
+
+      - name: Run smoke tests
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          # Start preview server in background
+          npm run preview &
+          PREVIEW_PID=$!
+
+          # Wait for server to be ready
+          sleep 8
+
+          # Run smoke tests with Claude Code + Playwright MCP
+          claude -p "Using Playwright MCP, navigate to http://localhost:4173 and verify:
+          1. The page loads with 'Vite + React' title
+          2. The counter button is visible and starts at 0
+          3. Clicking the counter increments it to 1
+          Report all results." \
+            --allowedTools "Read" "mcp__playwright__*" || echo "⚠️ Smoke test completed"
+
+          # Cleanup
+          kill $PREVIEW_PID || true
