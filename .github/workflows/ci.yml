@@ -60,4 +60,4 @@ jobs:
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
-          claude --non-interactive "The CI checks failed. Please fix all lint and TypeScript errors by running 'npm run lint' and 'npm run build', then commit the fixes with message 'fix: auto-fix lint and type errors' and push to origin"
+          claude -p "The CI checks failed. Please fix all lint and TypeScript errors by running 'npm run lint' and 'npm run build', then commit the fixes with message 'fix: auto-fix lint and type errors' and push to origin"
