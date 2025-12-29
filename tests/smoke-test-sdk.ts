@@ -25,8 +25,10 @@ Please:
    - Finds the counter button (should show "count is 0")
    - Clicks the button
    - Verifies the count incremented to 1
+   - Take screenshots and save them to test-results/ directory
+   - Save the final screenshot as test-results/smoke-test-final.png
 
-Use headless Chromium. Report all results clearly.`,
+Use headless Chromium. Create the test-results directory if needed. Report all results clearly.`,
       options: {
         allowedTools: ['Bash'],
         permissionMode: 'bypassPermissions', // Auto-approve all tools
