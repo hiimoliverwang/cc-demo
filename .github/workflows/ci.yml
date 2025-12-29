@@ -54,9 +54,7 @@ jobs:
           git config user.email "claude-code@demo.com"
 
       - name: Install Claude Code CLI
-        run: |
-          curl -fsSL https://raw.githubusercontent.com/anthropics/claude-code/main/install.sh | sh
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
+        run: npm install -g @anthropic-ai/claude-code
 
       - name: Run Claude Code to fix errors
         env:
