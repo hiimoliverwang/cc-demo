@@ -1,0 +1,65 @@
+name: CI with Auto-Fix
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # Job 1: Run checks (lint + typecheck)
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run lint
+        run: npm run lint
+
+      - name: Run typecheck
+        run: npm run build
+
+  # Job 2: Auto-fix with Claude Code (only runs if check fails)
+  auto-fix:
+    runs-on: ubuntu-latest
+    needs: check
+    if: failure()
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_PAT }}
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Configure git
+        run: |
+          git config user.name "Claude Code"
+          git config user.email "claude-code@demo.com"
+
+      - name: Install Claude Code CLI
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/anthropics/claude-code/main/install.sh | sh
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Run Claude Code to fix errors
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          claude --non-interactive "The CI checks failed. Please fix all lint and TypeScript errors by running 'npm run lint' and 'npm run build', then commit the fixes with message 'fix: auto-fix lint and type errors' and push to origin"
